@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { useTimetableStore } from "@/stores/timetableStore";
 import { Day, TimetableEntry, TimetableType } from "@/types/timetable";
 import { days } from "@/lib/sample-data";

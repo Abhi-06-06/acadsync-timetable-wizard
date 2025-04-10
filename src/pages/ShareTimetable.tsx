@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Copy, Download, Mail, Share2, WhatsappIcon } from "lucide-react";
+import { Copy, Download, Mail, Share2, MessageSquare } from "lucide-react";
 
 export default function ShareTimetable() {
   const handleCopyLink = () => {
@@ -44,7 +44,7 @@ export default function ShareTimetable() {
             Email
           </TabsTrigger>
           <TabsTrigger value="whatsapp">
-            <WhatsappIcon className="h-4 w-4 mr-2" />
+            <MessageSquare className="h-4 w-4 mr-2" />
             WhatsApp
           </TabsTrigger>
           <TabsTrigger value="download">
@@ -224,18 +224,18 @@ export default function ShareTimetable() {
                 <Label>Sharing Options</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" onClick={handleWhatsApp}>
-                    <WhatsappIcon className="h-4 w-4 mr-2" />
+                    <MessageSquare className="h-4 w-4 mr-2" />
                     Personal Chat
                   </Button>
                   <Button variant="outline" onClick={handleWhatsApp}>
-                    <WhatsappIcon className="h-4 w-4 mr-2" />
+                    <MessageSquare className="h-4 w-4 mr-2" />
                     Group Chat
                   </Button>
                 </div>
               </div>
               
               <Button className="w-full bg-acadsync-500 hover:bg-acadsync-700" onClick={handleWhatsApp}>
-                <WhatsappIcon className="h-4 w-4 mr-2" />
+                <MessageSquare className="h-4 w-4 mr-2" />
                 Open WhatsApp
               </Button>
             </CardContent>
