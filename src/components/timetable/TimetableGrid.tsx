@@ -1,18 +1,30 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTimetableStore } from "@/stores/timetableStore";
 import { Day, TimetableEntry, TimetableType } from "@/types/timetable";
 import { days } from "@/lib/sample-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { EntryEditDialog } from "./EntryEditDialog";
+import { Pencil, Beaker } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TimetableGridProps {
   type: TimetableType;
   filterById?: string; // Teacher ID or Class ID for filtered views
+  editable?: boolean;
 }
 
-export function TimetableGrid({ type, filterById }: TimetableGridProps) {
+export function TimetableGrid({ type, filterById, editable = true }: TimetableGridProps) {
   const { timeSlots, entries, subjects, teachers, classes } = useTimetableStore();
+  
+  // State for edit dialog
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  const [isNewEntry, setIsNewEntry] = useState(false);
+  const [newEntryDay, setNewEntryDay] = useState<Day | undefined>(undefined);
+  const [newEntryTimeSlotId, setNewEntryTimeSlotId] = useState<string | undefined>(undefined);
   
   // Sort time slots by start time
   const sortedTimeSlots = [...timeSlots].sort((a, b) => {
@@ -58,86 +70,178 @@ export function TimetableGrid({ type, filterById }: TimetableGridProps) {
     return classItem ? `${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}` : 'Unknown Class';
   };
   
+  // Handle click on entry to edit
+  const handleEntryClick = (entry: TimetableEntry) => {
+    if (!editable) return;
+    setSelectedEntry(entry);
+    setIsNewEntry(false);
+    setIsDialogOpen(true);
+  };
+  
+  // Handle click on empty slot to create new entry
+  const handleEmptySlotClick = (day: Day, timeSlotId: string) => {
+    if (!editable) return;
+    setSelectedEntry(null);
+    setIsNewEntry(true);
+    setNewEntryDay(day);
+    setNewEntryTimeSlotId(timeSlotId);
+    setIsDialogOpen(true);
+  };
+  
+  // Close dialog
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedEntry(null);
+    setIsNewEntry(false);
+    setNewEntryDay(undefined);
+    setNewEntryTimeSlotId(undefined);
+  };
+  
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[800px]">
-        <div className="grid grid-cols-[100px_repeat(6,1fr)] gap-2">
-          {/* Header row with days */}
-          <div className="h-12"></div>
-          {days.map(day => (
-            <div 
-              key={day} 
-              className="h-12 bg-acadsync-500 text-white rounded flex items-center justify-center font-semibold"
-            >
-              {day}
-            </div>
-          ))}
-          
-          {/* Time slots and entries */}
-          {sortedTimeSlots.map(timeSlot => (
-            <React.Fragment key={timeSlot.id}>
-              {/* Time slot column */}
+    <>
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[800px]">
+          <div className="grid grid-cols-[100px_repeat(6,1fr)] gap-2">
+            {/* Header row with days */}
+            <div className="h-12"></div>
+            {days.map(day => (
               <div 
-                className={cn(
-                  "p-2 flex flex-col justify-center text-sm",
-                  timeSlot.isBreak && "bg-gray-100"
-                )}
+                key={day} 
+                className="h-12 bg-acadsync-500 text-white rounded flex items-center justify-center font-semibold"
               >
-                <div className="font-medium">{timeSlot.startTime}</div>
-                <div className="text-xs text-gray-500">to {timeSlot.endTime}</div>
+                {day}
               </div>
-              
-              {/* Day columns */}
-              {days.map(day => {
-                const entry = getEntry(day, timeSlot.id);
-                
-                if (timeSlot.isBreak) {
-                  return (
-                    <div 
-                      key={day} 
-                      className="p-2 bg-gray-100 rounded border border-gray-200 flex items-center justify-center"
-                    >
-                      <span className="text-gray-500 text-sm">Break</span>
+            ))}
+            
+            {/* Time slots and entries */}
+            {sortedTimeSlots.map(timeSlot => (
+              <React.Fragment key={timeSlot.id}>
+                {/* Time slot column */}
+                <div 
+                  className={cn(
+                    "p-2 flex flex-col justify-center text-sm",
+                    timeSlot.isBreak && "bg-gray-100",
+                    timeSlot.isLab && "bg-blue-50"
+                  )}
+                >
+                  <div className="font-medium">{timeSlot.startTime}</div>
+                  <div className="text-xs text-gray-500">to {timeSlot.endTime}</div>
+                  {timeSlot.isLab && (
+                    <div className="text-xs text-blue-600 mt-1 flex items-center">
+                      <Beaker className="h-3 w-3 mr-1" />
+                      Lab Session
                     </div>
-                  );
-                }
+                  )}
+                </div>
                 
-                if (!entry) {
-                  return <div key={day} className="p-2 border border-gray-200 rounded"></div>;
-                }
-                
-                return (
-                  <Card key={day} className="border-0 shadow-sm overflow-hidden">
-                    <CardContent 
-                      className="p-2 flex flex-col h-full" 
-                      style={{ 
-                        borderLeft: `4px solid ${getSubjectColor(entry.subjectId)}`,
-                        backgroundColor: `${getSubjectColor(entry.subjectId)}15`
-                      }}
-                    >
-                      <div className="font-medium text-sm">
-                        {getSubjectName(entry.subjectId)}
+                {/* Day columns */}
+                {days.map(day => {
+                  const entry = getEntry(day, timeSlot.id);
+                  
+                  if (timeSlot.isBreak) {
+                    return (
+                      <div 
+                        key={day} 
+                        className="p-2 bg-gray-100 rounded border border-gray-200 flex items-center justify-center"
+                      >
+                        <span className="text-gray-500 text-sm">Break</span>
                       </div>
-                      
-                      {type !== TimetableType.TEACHER && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          {getTeacherName(entry.teacherId)}
-                        </div>
+                    );
+                  }
+                  
+                  if (!entry) {
+                    return (
+                      <div 
+                        key={day} 
+                        className={cn(
+                          "p-2 border border-gray-200 rounded min-h-[80px] cursor-pointer hover:bg-gray-50",
+                          timeSlot.isLab && "border-blue-200 bg-blue-50/30"
+                        )}
+                        onClick={() => handleEmptySlotClick(day, timeSlot.id)}
+                      >
+                        {editable && (
+                          <div className="flex justify-center items-center h-full text-gray-400">
+                            <Pencil className="h-4 w-4 mr-1" />
+                            <span className="text-xs">Add</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <Card 
+                      key={day} 
+                      className={cn(
+                        "border-0 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow",
+                        editable && "hover:ring-2 hover:ring-offset-1 hover:ring-blue-200"
                       )}
-                      
-                      {type !== TimetableType.CLASS && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          {getClassName(entry.classId)}
+                      onClick={() => handleEntryClick(entry)}
+                    >
+                      <CardContent 
+                        className="p-2 flex flex-col h-full min-h-[80px] relative" 
+                        style={{ 
+                          borderLeft: `4px solid ${getSubjectColor(entry.subjectId)}`,
+                          backgroundColor: `${getSubjectColor(entry.subjectId)}15`
+                        }}
+                      >
+                        <div className="font-medium text-sm">
+                          {getSubjectName(entry.subjectId)}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                        
+                        {type !== TimetableType.TEACHER && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            {getTeacherName(entry.teacherId)}
+                          </div>
+                        )}
+                        
+                        {type !== TimetableType.CLASS && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            {getClassName(entry.classId)}
+                          </div>
+                        )}
+                        
+                        {entry.isLab && (
+                          <div className="absolute top-1 right-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Beaker className="h-4 w-4 text-blue-600" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Lab Session</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        )}
+                        
+                        {editable && (
+                          <div className="absolute bottom-1 right-1 opacity-50 hover:opacity-100">
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+      
+      {/* Edit Dialog */}
+      <EntryEditDialog
+        entry={selectedEntry}
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+        createNew={isNewEntry}
+        day={newEntryDay}
+        timeSlotId={newEntryTimeSlotId}
+      />
+    </>
   );
 }

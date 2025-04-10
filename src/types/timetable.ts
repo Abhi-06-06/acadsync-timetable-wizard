@@ -1,4 +1,3 @@
-
 export type Day = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 
 export type TimeSlot = {
@@ -6,6 +5,7 @@ export type TimeSlot = {
   startTime: string;
   endTime: string;
   isBreak?: boolean;
+  isLab?: boolean;
 };
 
 export type Subject = {
@@ -36,6 +36,7 @@ export type TimetableEntry = {
   subjectId: string;
   teacherId: string;
   classId: string;
+  isLab?: boolean;
 };
 
 export type TimetableData = {

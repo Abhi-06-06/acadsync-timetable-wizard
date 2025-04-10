@@ -1,4 +1,3 @@
-
 import { Class, Day, Subject, Teacher, TimeSlot, TimetableEntry } from "@/types/timetable";
 
 // Sample time slots
@@ -11,6 +10,7 @@ export const sampleTimeSlots: TimeSlot[] = [
   { id: "ts6", startTime: "13:30", endTime: "14:30", isBreak: true },
   { id: "ts7", startTime: "14:30", endTime: "15:30" },
   { id: "ts8", startTime: "15:30", endTime: "16:30" },
+  { id: "ts9", startTime: "16:30", endTime: "18:30", isLab: true },
 ];
 
 // Sample subjects
@@ -73,6 +73,9 @@ export const generateSampleEntries = (): TimetableEntry[] => {
         const teacherIndex = Math.floor(Math.random() * eligibleTeachers.length);
         const teacher = eligibleTeachers[teacherIndex];
         
+        // Mark lab sessions for technical subjects (like Physics and Computer Science)
+        const isLabSession = slot.isLab && (subject.id === "sub2" || subject.id === "sub4");
+        
         entries.push({
           id: `entry-${day}-${classItem.id}-${slot.id}`,
           day,
@@ -80,6 +83,7 @@ export const generateSampleEntries = (): TimetableEntry[] => {
           subjectId: subject.id,
           teacherId: teacher.id,
           classId: classItem.id,
+          isLab: isLabSession
         });
       });
     });
