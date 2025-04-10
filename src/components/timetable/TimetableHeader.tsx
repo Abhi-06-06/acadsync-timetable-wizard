@@ -4,6 +4,7 @@ import { TimetableType } from "@/types/timetable";
 import { Download, Mail, Printer, RefreshCw, Share2 } from "lucide-react";
 import { useTimetableStore } from "@/stores/timetableStore";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface TimetableHeaderProps {
   title: string;
@@ -13,7 +14,7 @@ interface TimetableHeaderProps {
 }
 
 export function TimetableHeader({ title, type, onRefresh, filterId }: TimetableHeaderProps) {
-  const { exportToCsv, exportToJson } = useTimetableStore();
+  const { exportToCsv, exportToJson, shareTimetableViaEmail } = useTimetableStore();
   const navigate = useNavigate();
   
   // Map TimetableType enum to the string type needed for export functions
@@ -38,14 +39,43 @@ export function TimetableHeader({ title, type, onRefresh, filterId }: TimetableH
     exportToCsv(getExportType(), filterId);
   };
   
-  const handleEmail = () => {
-    navigate('/share', { 
-      state: { 
-        defaultTab: 'email',
-        type: getExportType(),
-        id: filterId
-      } 
-    });
+  const handleEmail = async () => {
+    // Quick email functionality directly from this component
+    const email = prompt("Enter email address to send the timetable:");
+    if (email) {
+      try {
+        await shareTimetableViaEmail(
+          email,
+          `${title} Timetable`,
+          `Please find the ${title.toLowerCase()} timetable attached.`,
+          getExportType(),
+          filterId
+        );
+        toast.success(`Timetable shared to ${email}`);
+      } catch (error) {
+        console.error("Error sending email:", error);
+        toast.error("Failed to send email");
+        // Navigate to full share page if quick email fails
+        navigate('/share', { 
+          state: { 
+            defaultTab: 'email',
+            type: getExportType(),
+            id: filterId
+          } 
+        });
+      }
+    } else if (email === "") {
+      toast.error("Email address is required");
+    } else {
+      // If user cancels prompt, navigate to share page
+      navigate('/share', { 
+        state: { 
+          defaultTab: 'email',
+          type: getExportType(),
+          id: filterId
+        } 
+      });
+    }
   };
   
   const handleShare = () => {
