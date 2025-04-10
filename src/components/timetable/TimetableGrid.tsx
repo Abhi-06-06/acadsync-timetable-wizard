@@ -6,9 +6,10 @@ import { days } from "@/lib/sample-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { EntryEditDialog } from "./EntryEditDialog";
-import { Pencil, Beaker } from "lucide-react";
+import { Pencil, Beaker, Users, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface TimetableGridProps {
   type: TimetableType;
@@ -68,6 +69,13 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
   const getClassName = (classId: string): string => {
     const classItem = classes.find(c => c.id === classId);
     return classItem ? `${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}` : 'Unknown Class';
+  };
+  
+  // Get class batch info
+  const getClassBatchInfo = (classId: string, batchNumber?: number): string => {
+    const classItem = classes.find(c => c.id === classId);
+    if (!classItem || !batchNumber) return '';
+    return `Batch ${batchNumber} (${classItem.batchCapacity || 15} students)`;
   };
   
   // Handle click on entry to edit
@@ -201,8 +209,18 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
                           </div>
                         )}
                         
-                        {entry.isLab && (
-                          <div className="absolute top-1 right-1">
+                        {entry.isLab && entry.batchNumber && (
+                          <Badge 
+                            variant="outline" 
+                            className="mt-1 text-xs py-0 px-1 bg-blue-50 text-blue-700 border-blue-200 flex items-center max-w-fit"
+                          >
+                            <Users className="h-3 w-3 mr-1" />
+                            {getClassBatchInfo(entry.classId, entry.batchNumber)}
+                          </Badge>
+                        )}
+                        
+                        <div className="absolute top-1 right-1 flex space-x-1">
+                          {entry.isLab && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Beaker className="h-4 w-4 text-blue-600" />
@@ -211,8 +229,8 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
                                 <p>Lab Session</p>
                               </TooltipContent>
                             </Tooltip>
-                          </div>
-                        )}
+                          )}
+                        </div>
                         
                         {editable && (
                           <div className="absolute bottom-1 right-1 opacity-50 hover:opacity-100">

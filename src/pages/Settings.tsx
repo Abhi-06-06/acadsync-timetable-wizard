@@ -1,13 +1,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTimetableStore } from "@/stores/timetableStore";
-import { FormEvent, useState } from "react";
-import { Plus, Save, Trash } from "lucide-react";
+import { useState } from "react";
+import { Edit, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { TimeSlotEditDialog } from "@/components/settings/TimeSlotEditDialog";
+import { SubjectEditDialog } from "@/components/settings/SubjectEditDialog";
+import { TeacherEditDialog } from "@/components/settings/TeacherEditDialog";
+import { ClassEditDialog } from "@/components/settings/ClassEditDialog";
+import { TimeSlot, Subject, Teacher, Class } from "@/types/timetable";
 
 export default function Settings() {
   const { 
@@ -17,43 +20,99 @@ export default function Settings() {
     classes, addClass, updateClass, removeClass
   } = useTimetableStore();
   
-  const [newTimeSlot, setNewTimeSlot] = useState({ startTime: "", endTime: "", isBreak: false });
-  const [newSubject, setNewSubject] = useState({ name: "", code: "", color: "#4361EE" });
-  const [newTeacher, setNewTeacher] = useState({ name: "", email: "", subjects: [] as string[] });
-  const [newClass, setNewClass] = useState({ name: "", year: 1, section: "" });
+  // Dialog states
+  const [timeSlotDialogOpen, setTimeSlotDialogOpen] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   
-  const handleAddTimeSlot = (e: FormEvent) => {
-    e.preventDefault();
-    if (newTimeSlot.startTime && newTimeSlot.endTime) {
-      addTimeSlot(newTimeSlot);
-      setNewTimeSlot({ startTime: "", endTime: "", isBreak: false });
+  const [subjectDialogOpen, setSubjectDialogOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  
+  const [teacherDialogOpen, setTeacherDialogOpen] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  
+  const [classDialogOpen, setClassDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  
+  // Time Slot handlers
+  const openAddTimeSlotDialog = () => {
+    setSelectedTimeSlot(null);
+    setTimeSlotDialogOpen(true);
+  };
+  
+  const openEditTimeSlotDialog = (timeSlot: TimeSlot) => {
+    setSelectedTimeSlot(timeSlot);
+    setTimeSlotDialogOpen(true);
+  };
+  
+  const handleTimeSlotSave = (timeSlotData: Omit<TimeSlot, 'id'>) => {
+    if (selectedTimeSlot) {
+      updateTimeSlot(selectedTimeSlot.id, timeSlotData);
+      toast.success("Time slot updated successfully!");
+    } else {
+      addTimeSlot(timeSlotData);
       toast.success("Time slot added successfully!");
     }
   };
   
-  const handleAddSubject = (e: FormEvent) => {
-    e.preventDefault();
-    if (newSubject.name && newSubject.code) {
-      addSubject(newSubject);
-      setNewSubject({ name: "", code: "", color: "#4361EE" });
+  // Subject handlers
+  const openAddSubjectDialog = () => {
+    setSelectedSubject(null);
+    setSubjectDialogOpen(true);
+  };
+  
+  const openEditSubjectDialog = (subject: Subject) => {
+    setSelectedSubject(subject);
+    setSubjectDialogOpen(true);
+  };
+  
+  const handleSubjectSave = (subjectData: Omit<Subject, 'id'>) => {
+    if (selectedSubject) {
+      updateSubject(selectedSubject.id, subjectData);
+      toast.success("Subject updated successfully!");
+    } else {
+      addSubject(subjectData);
       toast.success("Subject added successfully!");
     }
   };
   
-  const handleAddTeacher = (e: FormEvent) => {
-    e.preventDefault();
-    if (newTeacher.name && newTeacher.email) {
-      addTeacher(newTeacher);
-      setNewTeacher({ name: "", email: "", subjects: [] });
+  // Teacher handlers
+  const openAddTeacherDialog = () => {
+    setSelectedTeacher(null);
+    setTeacherDialogOpen(true);
+  };
+  
+  const openEditTeacherDialog = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setTeacherDialogOpen(true);
+  };
+  
+  const handleTeacherSave = (teacherData: Omit<Teacher, 'id'>) => {
+    if (selectedTeacher) {
+      updateTeacher(selectedTeacher.id, teacherData);
+      toast.success("Teacher updated successfully!");
+    } else {
+      addTeacher(teacherData);
       toast.success("Teacher added successfully!");
     }
   };
   
-  const handleAddClass = (e: FormEvent) => {
-    e.preventDefault();
-    if (newClass.name) {
-      addClass(newClass);
-      setNewClass({ name: "", year: 1, section: "" });
+  // Class handlers
+  const openAddClassDialog = () => {
+    setSelectedClass(null);
+    setClassDialogOpen(true);
+  };
+  
+  const openEditClassDialog = (classData: Class) => {
+    setSelectedClass(classData);
+    setClassDialogOpen(true);
+  };
+  
+  const handleClassSave = (classData: Omit<Class, 'id'>) => {
+    if (selectedClass) {
+      updateClass(selectedClass.id, classData);
+      toast.success("Class updated successfully!");
+    } else {
+      addClass(classData);
       toast.success("Class added successfully!");
     }
   };
@@ -79,64 +138,20 @@ export default function Settings() {
         <TabsContent value="time-slots" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Add Time Slot</CardTitle>
+              <CardTitle>Time Slots</CardTitle>
               <CardDescription>
                 Configure the time periods for the timetable
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleAddTimeSlot} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="start-time">Start Time</Label>
-                    <Input 
-                      id="start-time" 
-                      type="time" 
-                      value={newTimeSlot.startTime}
-                      onChange={(e) => setNewTimeSlot({...newTimeSlot, startTime: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end-time">End Time</Label>
-                    <Input 
-                      id="end-time" 
-                      type="time" 
-                      value={newTimeSlot.endTime}
-                      onChange={(e) => setNewTimeSlot({...newTimeSlot, endTime: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2 flex items-end">
-                    <div className="flex items-center h-10 space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id="is-break" 
-                        className="h-4 w-4"
-                        checked={newTimeSlot.isBreak}
-                        onChange={(e) => setNewTimeSlot({...newTimeSlot, isBreak: e.target.checked})}
-                      />
-                      <Label htmlFor="is-break">Is Break/Recess</Label>
-                    </div>
-                  </div>
-                </div>
-                
-                <Button type="submit" className="bg-acadsync-500 hover:bg-acadsync-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Time Slot
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Time Slots</CardTitle>
-              <CardDescription>
-                Manage existing time slots
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              <Button 
+                onClick={openAddTimeSlotDialog} 
+                className="mb-4 bg-acadsync-500 hover:bg-acadsync-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Time Slot
+              </Button>
+              
               <div className="space-y-4">
                 {timeSlots.length === 0 ? (
                   <div className="text-center p-4 border rounded-lg">
@@ -149,24 +164,22 @@ export default function Settings() {
                       .map((slot) => (
                         <div 
                           key={slot.id} 
-                          className="flex justify-between items-center p-3 border rounded-lg"
+                          className="flex justify-between items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                          onClick={() => openEditTimeSlotDialog(slot)}
                         >
                           <div className="flex items-center space-x-2">
-                            <div className={`w-2 h-2 rounded-full ${slot.isBreak ? 'bg-amber-500' : 'bg-green-500'}`} />
+                            <div className={`w-2 h-2 rounded-full ${slot.isBreak ? 'bg-amber-500' : slot.isLab ? 'bg-blue-500' : 'bg-green-500'}`} />
                             <span>
                               {slot.startTime} - {slot.endTime}
                               {slot.isBreak && " (Break)"}
+                              {slot.isLab && " (Lab)"}
                             </span>
                           </div>
                           <Button 
                             variant="ghost" 
-                            size="icon" 
-                            onClick={() => {
-                              removeTimeSlot(slot.id);
-                              toast.success("Time slot removed!");
-                            }}
+                            size="icon"
                           >
-                            <Trash className="h-4 w-4 text-destructive" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                         </div>
                       ))
@@ -182,72 +195,20 @@ export default function Settings() {
         <TabsContent value="subjects" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Add Subject</CardTitle>
-              <CardDescription>
-                Add new subjects to the timetable
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddSubject} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="subject-name">Subject Name</Label>
-                    <Input 
-                      id="subject-name" 
-                      type="text" 
-                      placeholder="e.g. Mathematics"
-                      value={newSubject.name}
-                      onChange={(e) => setNewSubject({...newSubject, name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="subject-code">Subject Code</Label>
-                    <Input 
-                      id="subject-code" 
-                      type="text" 
-                      placeholder="e.g. MATH101"
-                      value={newSubject.code}
-                      onChange={(e) => setNewSubject({...newSubject, code: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="subject-color">Color</Label>
-                    <div className="flex space-x-2">
-                      <Input 
-                        id="subject-color" 
-                        type="color" 
-                        className="w-12 h-10 p-1"
-                        value={newSubject.color}
-                        onChange={(e) => setNewSubject({...newSubject, color: e.target.value})}
-                      />
-                      <Input 
-                        type="text" 
-                        value={newSubject.color}
-                        onChange={(e) => setNewSubject({...newSubject, color: e.target.value})}
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <Button type="submit" className="bg-acadsync-500 hover:bg-acadsync-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Subject
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
               <CardTitle>Subjects</CardTitle>
               <CardDescription>
-                Manage existing subjects
+                Manage subjects for the timetable
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <Button 
+                onClick={openAddSubjectDialog} 
+                className="mb-4 bg-acadsync-500 hover:bg-acadsync-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Subject
+              </Button>
+              
               <div className="space-y-4">
                 {subjects.length === 0 ? (
                   <div className="text-center p-4 border rounded-lg">
@@ -258,7 +219,8 @@ export default function Settings() {
                     {subjects.map((subject) => (
                       <div 
                         key={subject.id} 
-                        className="flex justify-between items-center p-3 border rounded-lg"
+                        className="flex justify-between items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        onClick={() => openEditSubjectDialog(subject)}
                       >
                         <div className="flex items-center space-x-2">
                           <div 
@@ -270,12 +232,8 @@ export default function Settings() {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => {
-                            removeSubject(subject.id);
-                            toast.success("Subject removed!");
-                          }}
                         >
-                          <Trash className="h-4 w-4 text-destructive" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
@@ -290,82 +248,20 @@ export default function Settings() {
         <TabsContent value="teachers" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Add Teacher</CardTitle>
-              <CardDescription>
-                Add new teachers to the timetable
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddTeacher} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="teacher-name">Teacher Name</Label>
-                    <Input 
-                      id="teacher-name" 
-                      type="text" 
-                      placeholder="e.g. Dr. John Smith"
-                      value={newTeacher.name}
-                      onChange={(e) => setNewTeacher({...newTeacher, name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="teacher-email">Email</Label>
-                    <Input 
-                      id="teacher-email" 
-                      type="email" 
-                      placeholder="e.g. john.smith@acadsync.edu"
-                      value={newTeacher.email}
-                      onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="teacher-subjects">Subjects</Label>
-                  <div className="border rounded-lg p-2">
-                    <div className="grid gap-2 md:grid-cols-3">
-                      {subjects.map((subject) => (
-                        <div 
-                          key={subject.id} 
-                          className="flex items-center space-x-2"
-                        >
-                          <input 
-                            type="checkbox" 
-                            id={`subject-${subject.id}`} 
-                            className="h-4 w-4"
-                            checked={newTeacher.subjects.includes(subject.id)}
-                            onChange={(e) => {
-                              const updatedSubjects = e.target.checked
-                                ? [...newTeacher.subjects, subject.id]
-                                : newTeacher.subjects.filter(id => id !== subject.id);
-                              setNewTeacher({...newTeacher, subjects: updatedSubjects});
-                            }}
-                          />
-                          <Label htmlFor={`subject-${subject.id}`}>{subject.name}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <Button type="submit" className="bg-acadsync-500 hover:bg-acadsync-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Teacher
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
               <CardTitle>Teachers</CardTitle>
               <CardDescription>
-                Manage existing teachers
+                Manage teachers for the timetable
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <Button 
+                onClick={openAddTeacherDialog} 
+                className="mb-4 bg-acadsync-500 hover:bg-acadsync-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Teacher
+              </Button>
+              
               <div className="space-y-4">
                 {teachers.length === 0 ? (
                   <div className="text-center p-4 border rounded-lg">
@@ -376,7 +272,8 @@ export default function Settings() {
                     {teachers.map((teacher) => (
                       <div 
                         key={teacher.id} 
-                        className="flex justify-between items-center p-3 border rounded-lg"
+                        className="flex justify-between items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        onClick={() => openEditTeacherDialog(teacher)}
                       >
                         <div>
                           <div className="font-medium">{teacher.name}</div>
@@ -394,12 +291,8 @@ export default function Settings() {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => {
-                            removeTeacher(teacher.id);
-                            toast.success("Teacher removed!");
-                          }}
                         >
-                          <Trash className="h-4 w-4 text-destructive" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
@@ -414,65 +307,20 @@ export default function Settings() {
         <TabsContent value="classes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Add Class</CardTitle>
-              <CardDescription>
-                Add new classes to the timetable
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddClass} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="class-name">Class/Program Name</Label>
-                    <Input 
-                      id="class-name" 
-                      type="text" 
-                      placeholder="e.g. Computer Science"
-                      value={newClass.name}
-                      onChange={(e) => setNewClass({...newClass, name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="class-year">Year</Label>
-                    <Input 
-                      id="class-year" 
-                      type="number" 
-                      min="1"
-                      max="6"
-                      value={newClass.year}
-                      onChange={(e) => setNewClass({...newClass, year: parseInt(e.target.value) || 1})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="class-section">Section (Optional)</Label>
-                    <Input 
-                      id="class-section" 
-                      type="text" 
-                      placeholder="e.g. A, B, C"
-                      value={newClass.section}
-                      onChange={(e) => setNewClass({...newClass, section: e.target.value})}
-                    />
-                  </div>
-                </div>
-                
-                <Button type="submit" className="bg-acadsync-500 hover:bg-acadsync-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Class
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
               <CardTitle>Classes</CardTitle>
               <CardDescription>
-                Manage existing classes
+                Manage classes for the timetable
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <Button 
+                onClick={openAddClassDialog} 
+                className="mb-4 bg-acadsync-500 hover:bg-acadsync-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Class
+              </Button>
+              
               <div className="space-y-4">
                 {classes.length === 0 ? (
                   <div className="text-center p-4 border rounded-lg">
@@ -483,23 +331,23 @@ export default function Settings() {
                     {classes.map((classItem) => (
                       <div 
                         key={classItem.id} 
-                        className="flex justify-between items-center p-3 border rounded-lg"
+                        className="flex justify-between items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        onClick={() => openEditClassDialog(classItem)}
                       >
                         <div>
-                          <span className="font-medium">
+                          <div className="font-medium">
                             {classItem.name} - Year {classItem.year}
                             {classItem.section && ` (Section ${classItem.section})`}
-                          </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {classItem.batches || 4} batches of {classItem.batchCapacity || 15} students each
+                          </div>
                         </div>
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => {
-                            removeClass(classItem.id);
-                            toast.success("Class removed!");
-                          }}
                         >
-                          <Trash className="h-4 w-4 text-destructive" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
@@ -510,6 +358,40 @@ export default function Settings() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Dialogs */}
+      <TimeSlotEditDialog
+        timeSlot={selectedTimeSlot}
+        isOpen={timeSlotDialogOpen}
+        onClose={() => setTimeSlotDialogOpen(false)}
+        onSave={handleTimeSlotSave}
+        onDelete={removeTimeSlot}
+      />
+      
+      <SubjectEditDialog
+        subject={selectedSubject}
+        isOpen={subjectDialogOpen}
+        onClose={() => setSubjectDialogOpen(false)}
+        onSave={handleSubjectSave}
+        onDelete={removeSubject}
+      />
+      
+      <TeacherEditDialog
+        teacher={selectedTeacher}
+        subjects={subjects}
+        isOpen={teacherDialogOpen}
+        onClose={() => setTeacherDialogOpen(false)}
+        onSave={handleTeacherSave}
+        onDelete={removeTeacher}
+      />
+      
+      <ClassEditDialog
+        classData={selectedClass}
+        isOpen={classDialogOpen}
+        onClose={() => setClassDialogOpen(false)}
+        onSave={handleClassSave}
+        onDelete={removeClass}
+      />
     </div>
   );
 }

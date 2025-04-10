@@ -28,8 +28,21 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
     subjectId: entry?.subjectId || '',
     teacherId: entry?.teacherId || '',
     classId: entry?.classId || '',
-    isLab: entry?.isLab || false
+    isLab: entry?.isLab || false,
+    batchNumber: entry?.batchNumber || undefined
   });
+  
+  // Get selected class data for batch info
+  const selectedClass = React.useMemo(() => {
+    if (!formData.classId) return null;
+    return classes.find(c => c.id === formData.classId) || null;
+  }, [formData.classId, classes]);
+  
+  // Get selected time slot to check if it's a lab
+  const selectedTimeSlot = React.useMemo(() => {
+    if (!formData.timeSlotId) return null;
+    return timeSlots.find(ts => ts.id === formData.timeSlotId) || null;
+  }, [formData.timeSlotId, timeSlots]);
   
   React.useEffect(() => {
     if (entry) {
@@ -39,7 +52,8 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
         subjectId: entry.subjectId,
         teacherId: entry.teacherId,
         classId: entry.classId,
-        isLab: entry.isLab || false
+        isLab: entry.isLab || false,
+        batchNumber: entry.batchNumber
       });
     } else if (createNew) {
       setFormData({
@@ -48,12 +62,23 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
         subjectId: '',
         teacherId: '',
         classId: '',
-        isLab: false
+        isLab: selectedTimeSlot?.isLab || false,
+        batchNumber: undefined
       });
     }
-  }, [entry, createNew, day, timeSlotId]);
+  }, [entry, createNew, day, timeSlotId, selectedTimeSlot]);
   
-  const handleChange = (field: keyof Omit<TimetableEntry, 'id'>, value: string | boolean) => {
+  // Update isLab based on selected time slot
+  React.useEffect(() => {
+    if (selectedTimeSlot) {
+      setFormData(prev => ({
+        ...prev,
+        isLab: selectedTimeSlot.isLab || prev.isLab
+      }));
+    }
+  }, [selectedTimeSlot]);
+  
+  const handleChange = (field: keyof Omit<TimetableEntry, 'id'>, value: string | boolean | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
   
@@ -61,6 +86,12 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
     // Validate form data
     if (!formData.subjectId || !formData.teacherId || !formData.classId || !formData.timeSlotId) {
       toast.error("Please complete all required fields");
+      return;
+    }
+    
+    // If it's a lab session with batches, validate batch number
+    if (formData.isLab && selectedClass?.batches && selectedClass.batches > 1 && !formData.batchNumber) {
+      toast.error("Please select a batch for the lab session");
       return;
     }
     
@@ -192,12 +223,35 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
             <div className="flex items-center space-x-2 col-span-3">
               <Switch
                 id="isLab"
-                checked={formData.isLab}
+                checked={formData.isLab || (selectedTimeSlot?.isLab ?? false)}
                 onCheckedChange={(checked) => handleChange('isLab', checked)}
+                disabled={selectedTimeSlot?.isLab ?? false}
               />
               <Label htmlFor="isLab">Mark as lab session</Label>
             </div>
           </div>
+          
+          {/* Show batch selection only if it's a lab and selected class has multiple batches */}
+          {formData.isLab && selectedClass && selectedClass.batches && selectedClass.batches > 1 && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="batchNumber" className="text-right">Batch</Label>
+              <Select 
+                value={formData.batchNumber?.toString() || ""} 
+                onValueChange={(value) => handleChange('batchNumber', value ? parseInt(value) : undefined)}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select batch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: selectedClass.batches }, (_, i) => i + 1).map(batch => (
+                    <SelectItem key={batch} value={batch.toString()}>
+                      Batch {batch} ({selectedClass.batchCapacity || 15} students)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         
         <DialogFooter>

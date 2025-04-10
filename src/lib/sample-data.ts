@@ -1,3 +1,4 @@
+
 import { Class, Day, Subject, Teacher, TimeSlot, TimetableEntry } from "@/types/timetable";
 
 // Sample time slots
@@ -33,10 +34,10 @@ export const sampleTeachers: Teacher[] = [
 
 // Sample classes
 export const sampleClasses: Class[] = [
-  { id: "c1", name: "Computer Science", year: 1, section: "A" },
-  { id: "c2", name: "Computer Science", year: 1, section: "B" },
-  { id: "c3", name: "Electrical Engineering", year: 2, section: "A" },
-  { id: "c4", name: "Mechanical Engineering", year: 2, section: "B" },
+  { id: "c1", name: "Computer Science", year: 1, section: "A", batches: 4, batchCapacity: 15 },
+  { id: "c2", name: "Computer Science", year: 1, section: "B", batches: 4, batchCapacity: 15 },
+  { id: "c3", name: "Electrical Engineering", year: 2, section: "A", batches: 4, batchCapacity: 15 },
+  { id: "c4", name: "Mechanical Engineering", year: 2, section: "B", batches: 4, batchCapacity: 15 },
 ];
 
 // Sample days
@@ -76,6 +77,9 @@ export const generateSampleEntries = (): TimetableEntry[] => {
         // Mark lab sessions for technical subjects (like Physics and Computer Science)
         const isLabSession = slot.isLab && (subject.id === "sub2" || subject.id === "sub4");
         
+        // Assign a batch number for lab sessions
+        const batchNumber = isLabSession ? Math.floor(Math.random() * 4) + 1 : undefined;
+        
         entries.push({
           id: `entry-${day}-${classItem.id}-${slot.id}`,
           day,
@@ -83,7 +87,8 @@ export const generateSampleEntries = (): TimetableEntry[] => {
           subjectId: subject.id,
           teacherId: teacher.id,
           classId: classItem.id,
-          isLab: isLabSession
+          isLab: isLabSession,
+          batchNumber
         });
       });
     });

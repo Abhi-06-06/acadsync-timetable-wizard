@@ -1,3 +1,4 @@
+
 export type Day = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 
 export type TimeSlot = {
@@ -27,6 +28,8 @@ export type Class = {
   name: string;
   year: number;
   section?: string;
+  batches?: number;
+  batchCapacity?: number;
 };
 
 export type TimetableEntry = {
@@ -37,6 +40,7 @@ export type TimetableEntry = {
   teacherId: string;
   classId: string;
   isLab?: boolean;
+  batchNumber?: number; // For lab sessions with specific batches
 };
 
 export type TimetableData = {
