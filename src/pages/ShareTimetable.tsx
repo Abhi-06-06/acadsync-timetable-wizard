@@ -6,22 +6,115 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Copy, Download, Mail, Share2, MessageSquare } from "lucide-react";
+import { useTimetableStore } from "@/stores/timetableStore";
+import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 export default function ShareTimetable() {
+  const location = useLocation();
+  const locationState = location.state as { defaultTab?: string; type?: 'master' | 'teacher' | 'class'; id?: string } | null;
+  
+  const [selectedTab, setSelectedTab] = useState<string>(locationState?.defaultTab || 'link');
+  const [selectedType, setSelectedType] = useState<'master' | 'teacher' | 'class'>(locationState?.type || 'master');
+  const [selectedId, setSelectedId] = useState<string | undefined>(locationState?.id);
+  const [emailAddresses, setEmailAddresses] = useState<string>('');
+  const [emailSubject, setEmailSubject] = useState<string>('Your Timetable from ACADSYNC');
+  const [emailMessage, setEmailMessage] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  const { 
+    teachers, 
+    classes, 
+    getTimetableShareLink, 
+    shareTimetableViaWhatsApp, 
+    shareTimetableViaEmail,
+    exportToCsv,
+    exportToJson
+  } = useTimetableStore();
+  
+  // Update selected tab when location state changes
+  useEffect(() => {
+    if (locationState?.defaultTab) {
+      setSelectedTab(locationState.defaultTab);
+    }
+    if (locationState?.type) {
+      setSelectedType(locationState.type);
+    }
+    if (locationState?.id) {
+      setSelectedId(locationState.id);
+    }
+  }, [locationState]);
+  
+  const shareLink = getTimetableShareLink(selectedType, selectedId);
+  
   const handleCopyLink = () => {
-    toast.success("Link copied to clipboard!");
+    navigator.clipboard.writeText(shareLink)
+      .then(() => toast.success("Link copied to clipboard!"))
+      .catch(() => toast.error("Failed to copy link"));
   };
   
-  const handleSendEmail = () => {
-    toast.success("Email sent successfully!");
+  const handleSendEmail = async () => {
+    if (!emailAddresses) {
+      toast.error("Please enter at least one email address");
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const success = await shareTimetableViaEmail(
+        emailAddresses,
+        emailSubject,
+        emailMessage,
+        selectedType,
+        selectedId
+      );
+      
+      if (success) {
+        toast.success("Email sent successfully!");
+      } else {
+        toast.error("Failed to send email");
+      }
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error("An error occurred while sending the email");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleWhatsApp = () => {
-    toast.success("Opening WhatsApp to share timetable!");
+    shareTimetableViaWhatsApp(selectedType, selectedId);
   };
   
-  const handleDownload = () => {
-    toast.success("Downloading timetable!");
+  const handleDownload = (format: 'pdf' | 'excel' | 'image' | 'csv' | 'json') => {
+    switch (format) {
+      case 'csv':
+        exportToCsv(selectedType, selectedId);
+        break;
+      case 'json':
+        exportToJson(selectedType, selectedId);
+        break;
+      case 'pdf':
+      case 'excel':
+      case 'image':
+        // For demo purposes, we'll just show a toast
+        toast.success(`Downloading timetable as ${format.toUpperCase()}`);
+        break;
+    }
+  };
+
+  // Helper to get display name for type and ID
+  const getDisplayName = () => {
+    if (selectedType === 'master') {
+      return 'Master Timetable';
+    } else if (selectedType === 'teacher' && selectedId) {
+      const teacher = teachers.find(t => t.id === selectedId);
+      return teacher ? teacher.name : 'Unknown Teacher';
+    } else if (selectedType === 'class' && selectedId) {
+      const classItem = classes.find(c => c.id === selectedId);
+      return classItem ? `${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}` : 'Unknown Class';
+    }
+    return 'Timetable';
   };
 
   return (
@@ -33,7 +126,7 @@ export default function ShareTimetable() {
         </p>
       </div>
       
-      <Tabs defaultValue="link" className="space-y-4">
+      <Tabs defaultValue={selectedTab} value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="link">
             <Copy className="h-4 w-4 mr-2" />
@@ -64,19 +157,29 @@ export default function ShareTimetable() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="timetable-select">Select Timetable</Label>
-                <select className="w-full p-2 border rounded-md">
+                <select 
+                  className="w-full p-2 border rounded-md"
+                  value={`${selectedType}${selectedId ? `-${selectedId}` : ''}`}
+                  onChange={(e) => {
+                    const [type, id] = e.target.value.split('-');
+                    setSelectedType(type as 'master' | 'teacher' | 'class');
+                    setSelectedId(id);
+                  }}
+                >
                   <option value="master">Master Timetable</option>
                   <optgroup label="Teacher Timetables">
-                    <option value="teacher-1">Dr. John Smith</option>
-                    <option value="teacher-2">Prof. Jane Doe</option>
-                    <option value="teacher-3">Dr. Robert Johnson</option>
-                    <option value="teacher-4">Prof. Emily Williams</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher.id} value={`teacher-${teacher.id}`}>
+                        {teacher.name}
+                      </option>
+                    ))}
                   </optgroup>
                   <optgroup label="Class Timetables">
-                    <option value="class-1">Computer Science Year 1-A</option>
-                    <option value="class-2">Computer Science Year 1-B</option>
-                    <option value="class-3">Electrical Engineering Year 2-A</option>
-                    <option value="class-4">Mechanical Engineering Year 2-B</option>
+                    {classes.map(classItem => (
+                      <option key={classItem.id} value={`class-${classItem.id}`}>
+                        {`${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}`}
+                      </option>
+                    ))}
                   </optgroup>
                 </select>
               </div>
@@ -86,7 +189,7 @@ export default function ShareTimetable() {
                 <div className="flex">
                   <Input 
                     id="link" 
-                    value="https://acadsync.edu/share/timetable/master" 
+                    value={shareLink} 
                     readOnly
                     className="rounded-r-none"
                   />
@@ -107,7 +210,7 @@ export default function ShareTimetable() {
                     <Copy className="h-4 w-4 mr-2" />
                     Copy Link
                   </Button>
-                  <Button variant="outline" onClick={() => window.open('#', '_blank')}>
+                  <Button variant="outline" onClick={() => window.open(shareLink, '_blank')}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Open in Browser
                   </Button>
@@ -128,19 +231,29 @@ export default function ShareTimetable() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="timetable-select">Select Timetable</Label>
-                <select className="w-full p-2 border rounded-md">
+                <select 
+                  className="w-full p-2 border rounded-md"
+                  value={`${selectedType}${selectedId ? `-${selectedId}` : ''}`}
+                  onChange={(e) => {
+                    const [type, id] = e.target.value.split('-');
+                    setSelectedType(type as 'master' | 'teacher' | 'class');
+                    setSelectedId(id);
+                  }}
+                >
                   <option value="master">Master Timetable</option>
                   <optgroup label="Teacher Timetables">
-                    <option value="teacher-1">Dr. John Smith</option>
-                    <option value="teacher-2">Prof. Jane Doe</option>
-                    <option value="teacher-3">Dr. Robert Johnson</option>
-                    <option value="teacher-4">Prof. Emily Williams</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher.id} value={`teacher-${teacher.id}`}>
+                        {teacher.name}
+                      </option>
+                    ))}
                   </optgroup>
                   <optgroup label="Class Timetables">
-                    <option value="class-1">Computer Science Year 1-A</option>
-                    <option value="class-2">Computer Science Year 1-B</option>
-                    <option value="class-3">Electrical Engineering Year 2-A</option>
-                    <option value="class-4">Mechanical Engineering Year 2-B</option>
+                    {classes.map(classItem => (
+                      <option key={classItem.id} value={`class-${classItem.id}`}>
+                        {`${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}`}
+                      </option>
+                    ))}
                   </optgroup>
                 </select>
               </div>
@@ -151,6 +264,8 @@ export default function ShareTimetable() {
                   id="email" 
                   type="text"
                   placeholder="Enter email addresses separated by commas"
+                  value={emailAddresses}
+                  onChange={(e) => setEmailAddresses(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
                   You can enter multiple email addresses separated by commas
@@ -162,7 +277,8 @@ export default function ShareTimetable() {
                 <Input 
                   id="subject" 
                   type="text"
-                  defaultValue="Your Timetable from ACADSYNC"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
                 />
               </div>
               
@@ -172,12 +288,22 @@ export default function ShareTimetable() {
                   id="message" 
                   className="w-full p-2 border rounded-md min-h-[100px]"
                   placeholder="Add a personal message to the email"
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
                 ></textarea>
               </div>
               
-              <Button className="w-full bg-acadsync-500 hover:bg-acadsync-700" onClick={handleSendEmail}>
-                <Mail className="h-4 w-4 mr-2" />
-                Send Email
+              <Button 
+                className="w-full bg-acadsync-500 hover:bg-acadsync-700" 
+                onClick={handleSendEmail}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Sending...' : (
+                  <>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -194,19 +320,29 @@ export default function ShareTimetable() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="timetable-select">Select Timetable</Label>
-                <select className="w-full p-2 border rounded-md">
+                <select 
+                  className="w-full p-2 border rounded-md"
+                  value={`${selectedType}${selectedId ? `-${selectedId}` : ''}`}
+                  onChange={(e) => {
+                    const [type, id] = e.target.value.split('-');
+                    setSelectedType(type as 'master' | 'teacher' | 'class');
+                    setSelectedId(id);
+                  }}
+                >
                   <option value="master">Master Timetable</option>
                   <optgroup label="Teacher Timetables">
-                    <option value="teacher-1">Dr. John Smith</option>
-                    <option value="teacher-2">Prof. Jane Doe</option>
-                    <option value="teacher-3">Dr. Robert Johnson</option>
-                    <option value="teacher-4">Prof. Emily Williams</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher.id} value={`teacher-${teacher.id}`}>
+                        {teacher.name}
+                      </option>
+                    ))}
                   </optgroup>
                   <optgroup label="Class Timetables">
-                    <option value="class-1">Computer Science Year 1-A</option>
-                    <option value="class-2">Computer Science Year 1-B</option>
-                    <option value="class-3">Electrical Engineering Year 2-A</option>
-                    <option value="class-4">Mechanical Engineering Year 2-B</option>
+                    {classes.map(classItem => (
+                      <option key={classItem.id} value={`class-${classItem.id}`}>
+                        {`${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}`}
+                      </option>
+                    ))}
                   </optgroup>
                 </select>
               </div>
@@ -216,7 +352,8 @@ export default function ShareTimetable() {
                 <textarea 
                   id="message" 
                   className="w-full p-2 border rounded-md min-h-[100px]"
-                  defaultValue="Here is your timetable from ACADSYNC. Click the link to view: https://acadsync.edu/share/timetable/master"
+                  defaultValue={`Here is your timetable from ACADSYNC. Click the link to view: ${shareLink}`}
+                  readOnly
                 ></textarea>
               </div>
               
@@ -253,19 +390,29 @@ export default function ShareTimetable() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="timetable-select">Select Timetable</Label>
-                <select className="w-full p-2 border rounded-md">
+                <select 
+                  className="w-full p-2 border rounded-md"
+                  value={`${selectedType}${selectedId ? `-${selectedId}` : ''}`}
+                  onChange={(e) => {
+                    const [type, id] = e.target.value.split('-');
+                    setSelectedType(type as 'master' | 'teacher' | 'class');
+                    setSelectedId(id);
+                  }}
+                >
                   <option value="master">Master Timetable</option>
                   <optgroup label="Teacher Timetables">
-                    <option value="teacher-1">Dr. John Smith</option>
-                    <option value="teacher-2">Prof. Jane Doe</option>
-                    <option value="teacher-3">Dr. Robert Johnson</option>
-                    <option value="teacher-4">Prof. Emily Williams</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher.id} value={`teacher-${teacher.id}`}>
+                        {teacher.name}
+                      </option>
+                    ))}
                   </optgroup>
                   <optgroup label="Class Timetables">
-                    <option value="class-1">Computer Science Year 1-A</option>
-                    <option value="class-2">Computer Science Year 1-B</option>
-                    <option value="class-3">Electrical Engineering Year 2-A</option>
-                    <option value="class-4">Mechanical Engineering Year 2-B</option>
+                    {classes.map(classItem => (
+                      <option key={classItem.id} value={`class-${classItem.id}`}>
+                        {`${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}`}
+                      </option>
+                    ))}
                   </optgroup>
                 </select>
               </div>
@@ -277,13 +424,20 @@ export default function ShareTimetable() {
                   <option value="excel">Excel Spreadsheet</option>
                   <option value="image">Image (PNG)</option>
                   <option value="csv">CSV File</option>
+                  <option value="json">JSON File</option>
                 </select>
               </div>
               
               <div className="space-y-2">
                 <Label>Download Options</Label>
                 <div className="grid gap-2">
-                  <Button className="w-full bg-acadsync-500 hover:bg-acadsync-700" onClick={handleDownload}>
+                  <Button 
+                    className="w-full bg-acadsync-500 hover:bg-acadsync-700" 
+                    onClick={() => {
+                      const format = (document.getElementById('format') as HTMLSelectElement).value as 'pdf' | 'excel' | 'image' | 'csv' | 'json';
+                      handleDownload(format);
+                    }}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download Timetable
                   </Button>

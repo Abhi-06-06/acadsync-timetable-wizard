@@ -3,9 +3,15 @@ import { TimetableGrid } from "@/components/timetable/TimetableGrid";
 import { TimetableHeader } from "@/components/timetable/TimetableHeader";
 import { TimetableType } from "@/types/timetable";
 import { useTimetableStore } from "@/stores/timetableStore";
+import { useEffect } from "react";
 
 export default function MasterTimetable() {
-  const { resetSamples, generateTimetable } = useTimetableStore();
+  const { resetSamples, generateTimetable, loadTimetableData } = useTimetableStore();
+  
+  // Try to load saved timetable data on component mount
+  useEffect(() => {
+    loadTimetableData();
+  }, [loadTimetableData]);
   
   const handleRefresh = () => {
     generateTimetable();

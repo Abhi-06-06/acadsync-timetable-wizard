@@ -16,9 +16,76 @@ import {
   sampleClasses,
   sampleEntries
 } from '@/lib/sample-data';
+import { toast } from 'sonner';
 
 // Helper to generate a unique ID
 const generateId = () => Math.random().toString(36).substring(2, 9);
+
+// Helper for local storage operations
+const LOCAL_STORAGE_KEY = 'acadsync_timetable_data';
+
+// Helper functions for data export
+const generateCSV = (data: TimetableData, type: 'master' | 'teacher' | 'class', id?: string): string => {
+  // Headers for the CSV file
+  let csv = 'Day,Time Slot,Subject,Teacher,Class\n';
+  
+  // Filter entries based on type and id
+  const filteredEntries = data.entries.filter(entry => {
+    if (type === 'master') return true;
+    if (type === 'teacher' && entry.teacherId === id) return true;
+    if (type === 'class' && entry.classId === id) return true;
+    return false;
+  });
+  
+  // Add each entry as a row
+  filteredEntries.forEach(entry => {
+    const timeSlot = data.timeSlots.find(ts => ts.id === entry.timeSlotId);
+    const subject = data.subjects.find(s => s.id === entry.subjectId);
+    const teacher = data.teachers.find(t => t.id === entry.teacherId);
+    const classData = data.classes.find(c => c.id === entry.classId);
+    
+    if (timeSlot && subject && teacher && classData) {
+      const timeSlotStr = `${timeSlot.startTime}-${timeSlot.endTime}`;
+      const classStr = `${classData.name} Year ${classData.year}${classData.section ? `-${classData.section}` : ''}`;
+      
+      csv += `${entry.day},${timeSlotStr},${subject.name},${teacher.name},${classStr}\n`;
+    }
+  });
+  
+  return csv;
+};
+
+const exportToJSON = (data: TimetableData, type: 'master' | 'teacher' | 'class', id?: string): string => {
+  // Filter entries based on type and id
+  const filteredEntries = data.entries.filter(entry => {
+    if (type === 'master') return true;
+    if (type === 'teacher' && entry.teacherId === id) return true;
+    if (type === 'class' && entry.classId === id) return true;
+    return false;
+  });
+  
+  // Create a simplified version of the data for export
+  const exportData = {
+    type,
+    id,
+    entries: filteredEntries.map(entry => {
+      const timeSlot = data.timeSlots.find(ts => ts.id === entry.timeSlotId);
+      const subject = data.subjects.find(s => s.id === entry.subjectId);
+      const teacher = data.teachers.find(t => t.id === entry.teacherId);
+      const classData = data.classes.find(c => c.id === entry.classId);
+      
+      return {
+        day: entry.day,
+        timeSlot: timeSlot ? `${timeSlot.startTime}-${timeSlot.endTime}` : 'Unknown',
+        subject: subject?.name || 'Unknown',
+        teacher: teacher?.name || 'Unknown',
+        class: classData ? `${classData.name} Year ${classData.year}${classData.section ? `-${classData.section}` : ''}` : 'Unknown'
+      };
+    })
+  };
+  
+  return JSON.stringify(exportData, null, 2);
+};
 
 interface TimetableStore extends TimetableData {
   // Actions for time slots
@@ -51,9 +118,22 @@ interface TimetableStore extends TimetableData {
   
   // Reset to samples
   resetSamples: () => void;
+  
+  // Data persistence methods
+  saveTimetableData: () => void;
+  loadTimetableData: () => boolean;
+  
+  // Export methods
+  exportToCsv: (type: 'master' | 'teacher' | 'class', id?: string) => void;
+  exportToJson: (type: 'master' | 'teacher' | 'class', id?: string) => void;
+  
+  // Sharing methods
+  shareTimetableViaEmail: (email: string, subject: string, message: string, type: 'master' | 'teacher' | 'class', id?: string) => Promise<boolean>;
+  shareTimetableViaWhatsApp: (type: 'master' | 'teacher' | 'class', id?: string) => void;
+  getTimetableShareLink: (type: 'master' | 'teacher' | 'class', id?: string) => string;
 }
 
-export const useTimetableStore = create<TimetableStore>((set) => ({
+export const useTimetableStore = create<TimetableStore>((set, get) => ({
   timeSlots: sampleTimeSlots,
   subjects: sampleSubjects,
   teachers: sampleTeachers,
@@ -144,4 +224,177 @@ export const useTimetableStore = create<TimetableStore>((set) => ({
     classes: sampleClasses,
     entries: sampleEntries,
   })),
+  
+  // Data persistence methods
+  saveTimetableData: () => {
+    try {
+      const state = get();
+      const data = {
+        timeSlots: state.timeSlots,
+        subjects: state.subjects,
+        teachers: state.teachers,
+        classes: state.classes,
+        entries: state.entries,
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+      toast.success('Timetable data saved successfully');
+      return true;
+    } catch (error) {
+      console.error('Error saving timetable data:', error);
+      toast.error('Failed to save timetable data');
+      return false;
+    }
+  },
+  
+  loadTimetableData: () => {
+    try {
+      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (storedData) {
+        const data = JSON.parse(storedData) as TimetableData;
+        set({
+          timeSlots: data.timeSlots,
+          subjects: data.subjects,
+          teachers: data.teachers,
+          classes: data.classes,
+          entries: data.entries,
+        });
+        toast.success('Timetable data loaded successfully');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading timetable data:', error);
+      toast.error('Failed to load timetable data');
+      return false;
+    }
+  },
+  
+  // Export methods
+  exportToCsv: (type, id) => {
+    try {
+      const state = get();
+      const csv = generateCSV(state, type, id);
+      
+      // Create a blob and download link
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      
+      // Set filename based on type
+      let filename = 'acadsync-timetable';
+      if (type === 'teacher') {
+        const teacher = state.teachers.find(t => t.id === id);
+        if (teacher) filename += `-${teacher.name.toLowerCase().replace(/\s+/g, '-')}`;
+      } else if (type === 'class') {
+        const classItem = state.classes.find(c => c.id === id);
+        if (classItem) filename += `-${classItem.name.toLowerCase().replace(/\s+/g, '-')}-year-${classItem.year}${classItem.section ? `-${classItem.section}` : ''}`;
+      }
+      link.setAttribute('download', `${filename}.csv`);
+      
+      // Trigger download and cleanup
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Timetable exported to CSV successfully');
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      toast.error('Failed to export timetable to CSV');
+    }
+  },
+  
+  exportToJson: (type, id) => {
+    try {
+      const state = get();
+      const json = exportToJSON(state, type, id);
+      
+      // Create a blob and download link
+      const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      
+      // Set filename based on type
+      let filename = 'acadsync-timetable';
+      if (type === 'teacher') {
+        const teacher = state.teachers.find(t => t.id === id);
+        if (teacher) filename += `-${teacher.name.toLowerCase().replace(/\s+/g, '-')}`;
+      } else if (type === 'class') {
+        const classItem = state.classes.find(c => c.id === id);
+        if (classItem) filename += `-${classItem.name.toLowerCase().replace(/\s+/g, '-')}-year-${classItem.year}${classItem.section ? `-${classItem.section}` : ''}`;
+      }
+      link.setAttribute('download', `${filename}.json`);
+      
+      // Trigger download and cleanup
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Timetable exported to JSON successfully');
+    } catch (error) {
+      console.error('Error exporting to JSON:', error);
+      toast.error('Failed to export timetable to JSON');
+    }
+  },
+  
+  // Sharing methods
+  shareTimetableViaEmail: async (email, subject, message, type, id) => {
+    try {
+      // In a real application, this would call a backend API
+      // For demo purposes, we'll simulate a successful API call
+      console.log(`Sharing timetable via email to ${email}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Message: ${message}`);
+      console.log(`Type: ${type}`);
+      console.log(`ID: ${id || 'N/A'}`);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast.success(`Timetable shared via email to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('Error sharing via email:', error);
+      toast.error('Failed to share timetable via email');
+      return false;
+    }
+  },
+  
+  shareTimetableViaWhatsApp: (type, id) => {
+    try {
+      const state = get();
+      
+      // Create a share text
+      let shareText = 'Check out this timetable from ACADSYNC: ';
+      shareText += get().getTimetableShareLink(type, id);
+      
+      // Encode for WhatsApp
+      const encodedText = encodeURIComponent(shareText);
+      const whatsappUrl = `https://wa.me/?text=${encodedText}`;
+      
+      // Open WhatsApp
+      window.open(whatsappUrl, '_blank');
+      
+      toast.success('Opening WhatsApp to share timetable');
+    } catch (error) {
+      console.error('Error sharing via WhatsApp:', error);
+      toast.error('Failed to share timetable via WhatsApp');
+    }
+  },
+  
+  getTimetableShareLink: (type, id) => {
+    // Create a link that could be used to view the timetable
+    const baseUrl = window.location.origin;
+    
+    if (type === 'master') {
+      return `${baseUrl}/timetable/master`;
+    } else if (type === 'teacher' && id) {
+      return `${baseUrl}/timetable/teacher/${id}`;
+    } else if (type === 'class' && id) {
+      return `${baseUrl}/timetable/class/${id}`;
+    }
+    
+    return `${baseUrl}/timetable/master`;
+  }
 }));
