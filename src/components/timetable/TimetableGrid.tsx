@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { EntryEditDialog } from "./EntryEditDialog";
 import { Pencil, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TimetableGridProps {
   type: TimetableType;
@@ -203,16 +203,14 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
                         
                         {entry.isLab && (
                           <div className="absolute top-1 right-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Beaker className="h-4 w-4 text-blue-600" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Lab Session</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Beaker className="h-4 w-4 text-blue-600" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Lab Session</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         )}
                         
