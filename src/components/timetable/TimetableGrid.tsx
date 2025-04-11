@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useTimetableStore } from "@/stores/timetableStore";
 import { Day, TimetableEntry, TimetableType } from "@/types/timetable";
@@ -6,7 +5,7 @@ import { days } from "@/lib/sample-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { EntryEditDialog } from "./EntryEditDialog";
-import { Pencil, Beaker, Users, Flask, Building } from "lucide-react";
+import { Pencil, Beaker, Users, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -20,19 +19,16 @@ interface TimetableGridProps {
 export function TimetableGrid({ type, filterById, editable = true }: TimetableGridProps) {
   const { timeSlots, entries, subjects, teachers, classes, labRooms } = useTimetableStore();
   
-  // State for edit dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isNewEntry, setIsNewEntry] = useState(false);
   const [newEntryDay, setNewEntryDay] = useState<Day | undefined>(undefined);
   const [newEntryTimeSlotId, setNewEntryTimeSlotId] = useState<string | undefined>(undefined);
   
-  // Sort time slots by start time
   const sortedTimeSlots = [...timeSlots].sort((a, b) => {
     return a.startTime.localeCompare(b.startTime);
   });
   
-  // Filter entries based on type and filterById
   const filteredEntries = entries.filter(entry => {
     if (type === TimetableType.MASTER) return true;
     if (type === TimetableType.TEACHER && entry.teacherId === filterById) return true;
@@ -40,52 +36,44 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
     return false;
   });
   
-  // Get entry for a specific day and time slot
   const getEntry = (day: Day, timeSlotId: string): TimetableEntry | undefined => {
     return filteredEntries.find(
       entry => entry.day === day && entry.timeSlotId === timeSlotId
     );
   };
   
-  // Get subject name from ID
   const getSubjectName = (subjectId: string): string => {
     const subject = subjects.find(s => s.id === subjectId);
     return subject ? subject.name : 'Unknown Subject';
   };
   
-  // Get subject color from ID
   const getSubjectColor = (subjectId: string): string => {
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.color || '#4361EE';
   };
   
-  // Get teacher name from ID
   const getTeacherName = (teacherId: string): string => {
     const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? teacher.name : 'Unknown Teacher';
   };
   
-  // Get class name from ID
   const getClassName = (classId: string): string => {
     const classItem = classes.find(c => c.id === classId);
     return classItem ? `${classItem.name} Year ${classItem.year}${classItem.section ? `-${classItem.section}` : ''}` : 'Unknown Class';
   };
   
-  // Get class batch info
   const getClassBatchInfo = (classId: string, batchNumber?: number): string => {
     const classItem = classes.find(c => c.id === classId);
     if (!classItem || !batchNumber) return '';
     return `Batch ${batchNumber} (${classItem.batchCapacity || 15} students)`;
   };
   
-  // Get lab room name from ID
   const getLabRoomName = (labRoomId?: string): string => {
     if (!labRoomId) return '';
     const room = labRooms.find(r => r.id === labRoomId);
     return room ? room.name : 'Unknown Lab';
   };
   
-  // Handle click on entry to edit
   const handleEntryClick = (entry: TimetableEntry) => {
     if (!editable) return;
     setSelectedEntry(entry);
@@ -93,7 +81,6 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
     setIsDialogOpen(true);
   };
   
-  // Handle click on empty slot to create new entry
   const handleEmptySlotClick = (day: Day, timeSlotId: string) => {
     if (!editable) return;
     setSelectedEntry(null);
@@ -103,7 +90,6 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
     setIsDialogOpen(true);
   };
   
-  // Close dialog
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedEntry(null);
@@ -117,7 +103,6 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
       <div className="w-full overflow-x-auto">
         <div className="min-w-[800px]">
           <div className="grid grid-cols-[100px_repeat(6,1fr)] gap-2">
-            {/* Header row with days */}
             <div className="h-12"></div>
             {days.map(day => (
               <div 
@@ -128,10 +113,8 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
               </div>
             ))}
             
-            {/* Time slots and entries */}
             {sortedTimeSlots.map(timeSlot => (
               <React.Fragment key={timeSlot.id}>
-                {/* Time slot column */}
                 <div 
                   className={cn(
                     "p-2 flex flex-col justify-center text-sm",
@@ -143,13 +126,12 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
                   <div className="text-xs text-gray-500">to {timeSlot.endTime}</div>
                   {timeSlot.isLab && (
                     <div className="text-xs text-blue-600 mt-1 flex items-center">
-                      <Flask className="h-3 w-3 mr-1" />
+                      <Beaker className="h-3 w-3 mr-1" />
                       Lab Session
                     </div>
                   )}
                 </div>
                 
-                {/* Day columns */}
                 {days.map(day => {
                   const entry = getEntry(day, timeSlot.id);
                   
@@ -266,7 +248,6 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
         </div>
       </div>
       
-      {/* Edit Dialog */}
       <EntryEditDialog
         entry={selectedEntry}
         isOpen={isDialogOpen}
