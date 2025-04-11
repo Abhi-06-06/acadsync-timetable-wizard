@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTimetableStore } from "@/stores/timetableStore";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Clock, Settings } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export default function GenerateTimetable() {
   const { timeSlots, subjects, teachers, classes, generateTimetable } = useTimetableStore();
+  const navigate = useNavigate();
   
   const handleGenerate = () => {
     // In a real implementation, this would validate inputs first
@@ -27,14 +28,23 @@ export default function GenerateTimetable() {
     });
   };
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center mb-4">
+        <Button variant="outline" size="sm" onClick={handleBack} className="mr-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
         <h1 className="text-3xl font-bold tracking-tight">Generate Timetable</h1>
-        <p className="text-muted-foreground">
-          Configure and generate optimized timetables for the entire college.
-        </p>
       </div>
+      
+      <p className="text-muted-foreground">
+        Configure and generate optimized timetables for the entire college.
+      </p>
       
       <Tabs defaultValue="settings" className="space-y-4">
         <TabsList>

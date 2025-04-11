@@ -18,13 +18,10 @@ import {
 } from '@/lib/sample-data';
 import { toast } from 'sonner';
 
-// Helper to generate a unique ID
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-// Helper for local storage operations
 const LOCAL_STORAGE_KEY = 'acadsync_timetable_data';
 
-// Default lab rooms
 const defaultLabRooms: LabRoom[] = [
   { id: 'lab1', name: 'Computer Lab 1', capacity: 30 },
   { id: 'lab2', name: 'Computer Lab 2', capacity: 30 },
@@ -33,12 +30,9 @@ const defaultLabRooms: LabRoom[] = [
   { id: 'lab5', name: 'Biology Lab', capacity: 30 },
 ];
 
-// Helper functions for data export
 const generateCSV = (data: TimetableData, type: 'master' | 'teacher' | 'class', id?: string): string => {
-  // Headers for the CSV file
   let csv = 'Day,Time Slot,Subject,Teacher,Class\n';
   
-  // Filter entries based on type and id
   const filteredEntries = data.entries.filter(entry => {
     if (type === 'master') return true;
     if (type === 'teacher' && entry.teacherId === id) return true;
@@ -46,7 +40,6 @@ const generateCSV = (data: TimetableData, type: 'master' | 'teacher' | 'class', 
     return false;
   });
   
-  // Add each entry as a row
   filteredEntries.forEach(entry => {
     const timeSlot = data.timeSlots.find(ts => ts.id === entry.timeSlotId);
     const subject = data.subjects.find(s => s.id === entry.subjectId);
@@ -65,7 +58,6 @@ const generateCSV = (data: TimetableData, type: 'master' | 'teacher' | 'class', 
 };
 
 const exportToJSON = (data: TimetableData, type: 'master' | 'teacher' | 'class', id?: string): string => {
-  // Filter entries based on type and id
   const filteredEntries = data.entries.filter(entry => {
     if (type === 'master') return true;
     if (type === 'teacher' && entry.teacherId === id) return true;
@@ -73,7 +65,6 @@ const exportToJSON = (data: TimetableData, type: 'master' | 'teacher' | 'class',
     return false;
   });
   
-  // Create a simplified version of the data for export
   const exportData = {
     type,
     id,
@@ -97,55 +88,43 @@ const exportToJSON = (data: TimetableData, type: 'master' | 'teacher' | 'class',
 };
 
 interface TimetableStore extends TimetableData {
-  // Actions for time slots
   addTimeSlot: (timeSlot: Omit<TimeSlot, 'id'>) => void;
   updateTimeSlot: (id: string, timeSlot: Partial<TimeSlot>) => void;
   removeTimeSlot: (id: string) => void;
   
-  // Actions for subjects
   addSubject: (subject: Omit<Subject, 'id'>) => void;
   updateSubject: (id: string, subject: Partial<Subject>) => void;
   removeSubject: (id: string) => void;
   
-  // Actions for teachers
   addTeacher: (teacher: Omit<Teacher, 'id'>) => void;
   updateTeacher: (id: string, teacher: Partial<Teacher>) => void;
   removeTeacher: (id: string) => void;
   
-  // Actions for classes
   addClass: (classItem: Omit<Class, 'id'>) => void;
   updateClass: (id: string, classItem: Partial<Class>) => void;
   removeClass: (id: string) => void;
   
-  // Actions for timetable entries
   addEntry: (entry: Omit<TimetableEntry, 'id'>) => void;
   updateEntry: (id: string, entry: Partial<TimetableEntry>) => void;
   removeEntry: (id: string) => void;
   
-  // Actions for lab rooms
   addLabRoom: (labRoom: Omit<LabRoom, 'id'>) => void;
   updateLabRoom: (id: string, labRoom: Partial<LabRoom>) => void;
   removeLabRoom: (id: string) => void;
   
-  // Generate timetable
   generateTimetable: () => void;
   
-  // Auto schedule lab sessions
   scheduleLabSessions: (subjectId: string) => void;
   
-  // Reset to samples
   resetSamples: () => void;
   resetToCollegeHours: () => void;
   
-  // Data persistence methods
   saveTimetableData: () => void;
   loadTimetableData: () => boolean;
   
-  // Export methods
   exportToCsv: (type: 'master' | 'teacher' | 'class', id?: string) => void;
   exportToJson: (type: 'master' | 'teacher' | 'class', id?: string) => void;
   
-  // Sharing methods
   shareTimetableViaEmail: (email: string, subject: string, message: string, type: 'master' | 'teacher' | 'class', id?: string) => Promise<boolean>;
   shareTimetableViaWhatsApp: (type: 'master' | 'teacher' | 'class', id?: string) => void;
   getTimetableShareLink: (type: 'master' | 'teacher' | 'class', id?: string) => string;
@@ -159,7 +138,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
   entries: sampleEntries,
   labRooms: defaultLabRooms,
   
-  // Time slots actions
   addTimeSlot: (timeSlot) => set((state) => ({
     timeSlots: [...state.timeSlots, { id: generateId(), ...timeSlot }]
   })),
@@ -173,14 +151,12 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     entries: state.entries.filter((entry) => entry.timeSlotId !== id)
   })),
   
-  // Subjects actions
   addSubject: (subject) => {
     const id = generateId();
     set((state) => ({
       subjects: [...state.subjects, { id, ...subject }]
     }));
     
-    // Auto-schedule lab sessions if this subject has labs
     if (subject.hasLab) {
       get().scheduleLabSessions(id);
     }
@@ -196,7 +172,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       )
     }));
     
-    // If lab status changed from false to true, schedule labs
     if (!wasLab && isLabNow) {
       get().scheduleLabSessions(id);
     }
@@ -206,7 +181,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     entries: state.entries.filter((entry) => entry.subjectId !== id)
   })),
   
-  // Teachers actions
   addTeacher: (teacher) => set((state) => ({
     teachers: [...state.teachers, { id: generateId(), ...teacher }]
   })),
@@ -220,7 +194,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     entries: state.entries.filter((entry) => entry.teacherId !== id)
   })),
   
-  // Classes actions
   addClass: (classItem) => set((state) => ({
     classes: [...state.classes, { id: generateId(), ...classItem }]
   })),
@@ -234,7 +207,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     entries: state.entries.filter((entry) => entry.classId !== id)
   })),
   
-  // Lab rooms actions
   addLabRoom: (labRoom) => set((state) => ({
     labRooms: [...state.labRooms, { id: generateId(), ...labRoom }]
   })),
@@ -250,20 +222,28 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     )
   })),
   
-  // Timetable entries actions
-  addEntry: (entry) => set((state) => ({
-    entries: [...state.entries, { id: generateId(), ...entry }]
-  })),
-  updateEntry: (id, entry) => set((state) => ({
-    entries: state.entries.map((e) => 
-      e.id === id ? { ...e, ...entry } : e
-    )
-  })),
-  removeEntry: (id) => set((state) => ({
-    entries: state.entries.filter((e) => e.id !== id)
-  })),
+  addEntry: (entry) => {
+    const state = get();
+    
+    if (!entry.isLab) {
+      const subjectHasLectureOnDay = state.entries.some(
+        e => e.day === entry.day && 
+            e.subjectId === entry.subjectId && 
+            e.classId === entry.classId &&
+            !e.isLab
+      );
+      
+      if (subjectHasLectureOnDay) {
+        toast.error("Only one lecture of the same subject is allowed per day");
+        return;
+      }
+    }
+    
+    set((state) => ({
+      entries: [...state.entries, { id: generateId(), ...entry }]
+    }));
+  },
   
-  // Auto schedule lab sessions for a subject
   scheduleLabSessions: (subjectId) => {
     const state = get();
     const subject = state.subjects.find(s => s.id === subjectId);
@@ -272,7 +252,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       return;
     }
     
-    // Find teachers who can teach this subject
     const eligibleTeachers = state.teachers.filter(t => 
       t.subjects.includes(subjectId)
     );
@@ -282,7 +261,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       return;
     }
     
-    // Find lab time slots (2 hours duration)
     const labTimeSlots = state.timeSlots.filter(ts => 
       ts.isLab && !ts.isBreak
     );
@@ -292,98 +270,86 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       return;
     }
     
-    // For each class, try to schedule a lab session
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as Day[];
+    
     state.classes.forEach(classItem => {
-      // Skip classes without batch information
       if (!classItem.batches || classItem.batches <= 0) {
         return;
       }
       
-      // Try to find best day and time slot for each batch
-      for (let batchNumber = 1; batchNumber <= classItem.batches; batchNumber++) {
-        // Find available time slots
-        const availableTimeSlots = labTimeSlots.filter(timeSlot => {
-          // Check if this time slot is already used for this class and batch
-          const existingEntry = state.entries.find(entry => 
-            entry.classId === classItem.id && 
-            entry.timeSlotId === timeSlot.id &&
-            entry.batchNumber === batchNumber
-          );
-          
-          return !existingEntry;
-        });
-        
-        if (availableTimeSlots.length === 0) {
-          toast.warning(`No available lab slots for ${classItem.name} Year ${classItem.year} Batch ${batchNumber}`);
-          continue;
-        }
-        
-        // Select a time slot randomly for now
-        // In a real implementation, we'd use a more sophisticated algorithm
-        const selectedTimeSlot = availableTimeSlots[0];
-        
-        // Select a day that doesn't already have this lab scheduled
-        const availableDays = (["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as Day[])
-          .filter(day => {
-            // Check if this class already has a lab on this day
-            const existingEntry = state.entries.find(entry => 
-              entry.classId === classItem.id && 
-              entry.day === day &&
-              entry.timeSlotId === selectedTimeSlot.id
-            );
+      let selectedDay: Day | null = null;
+      let selectedTimeSlot: TimeSlot | null = null;
+      
+      for (const day of days) {
+        for (const timeSlot of labTimeSlots) {
+          const canScheduleAllBatches = Array.from({ length: classItem.batches }, (_, i) => i + 1).every(batchNumber => {
+            const availableTeachers = eligibleTeachers.filter(teacher => {
+              const teacherIsBusy = state.entries.some(entry => 
+                entry.teacherId === teacher.id && 
+                entry.day === day &&
+                entry.timeSlotId === timeSlot.id
+              );
+              return !teacherIsBusy;
+            });
             
-            return !existingEntry;
+            const availableLabRooms = state.labRooms.filter(labRoom => {
+              const labRoomIsOccupied = state.entries.some(entry => 
+                entry.labRoomId === labRoom.id && 
+                entry.day === day &&
+                entry.timeSlotId === timeSlot.id
+              );
+              return !labRoomIsOccupied;
+            });
+            
+            return availableTeachers.length >= 1 && availableLabRooms.length >= 1;
           });
-        
-        if (availableDays.length === 0) {
-          toast.warning(`No available days for ${classItem.name} Year ${classItem.year} Batch ${batchNumber} lab`);
-          continue;
+          
+          if (canScheduleAllBatches) {
+            selectedDay = day;
+            selectedTimeSlot = timeSlot;
+            break;
+          }
         }
-        
-        // Select a day randomly for now
-        const selectedDay = availableDays[0];
-        
-        // Select a teacher who is available during this time
+        if (selectedDay && selectedTimeSlot) break;
+      }
+      
+      if (!selectedDay || !selectedTimeSlot) {
+        toast.warning(`Could not find a suitable day and time for ${subject.name} lab for all batches of ${classItem.name} Year ${classItem.year}`);
+        return;
+      }
+      
+      for (let batchNumber = 1; batchNumber <= classItem.batches; batchNumber++) {
         const availableTeachers = eligibleTeachers.filter(teacher => {
-          // Check if this teacher is already busy during this time slot
-          const existingEntry = state.entries.find(entry => 
+          const teacherIsBusy = state.entries.some(entry => 
             entry.teacherId === teacher.id && 
             entry.day === selectedDay &&
-            entry.timeSlotId === selectedTimeSlot.id
+            entry.timeSlotId === selectedTimeSlot!.id
           );
-          
-          return !existingEntry;
+          return !teacherIsBusy;
         });
         
         if (availableTeachers.length === 0) {
-          toast.warning(`No available teachers for ${subject.name} lab for ${classItem.name} Year ${classItem.year} Batch ${batchNumber}`);
+          toast.warning(`No available teachers for batch ${batchNumber}`);
           continue;
         }
         
-        // Select a teacher randomly for now
-        const selectedTeacher = availableTeachers[0];
-        
-        // Find an available lab room
         const availableLabRooms = state.labRooms.filter(labRoom => {
-          // Check if this lab room is already in use during this time slot
-          const existingEntry = state.entries.find(entry => 
+          const labRoomIsOccupied = state.entries.some(entry => 
             entry.labRoomId === labRoom.id && 
             entry.day === selectedDay &&
-            entry.timeSlotId === selectedTimeSlot.id
+            entry.timeSlotId === selectedTimeSlot!.id
           );
-          
-          return !existingEntry;
+          return !labRoomIsOccupied;
         });
         
         if (availableLabRooms.length === 0) {
-          toast.warning(`No available lab rooms for ${subject.name} lab`);
+          toast.warning(`No available lab rooms for batch ${batchNumber}`);
           continue;
         }
         
-        // Select a lab room randomly for now
+        const selectedTeacher = availableTeachers[0];
         const selectedLabRoom = availableLabRooms[0];
         
-        // Create the lab entry
         const newEntry: Omit<TimetableEntry, 'id'> = {
           day: selectedDay,
           timeSlotId: selectedTimeSlot.id,
@@ -402,14 +368,10 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     });
   },
   
-  // Generate timetable with algorithm
   generateTimetable: () => set((state) => {
-    // For now, just using sample data
-    // In a real implementation, this would use a complex algorithm
     return { entries: sampleEntries };
   }),
   
-  // Reset to samples
   resetSamples: () => set(() => ({
     timeSlots: sampleTimeSlots,
     subjects: sampleSubjects,
@@ -419,17 +381,15 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     labRooms: defaultLabRooms,
   })),
   
-  // Reset time slots to college hours (10am to 5pm)
   resetToCollegeHours: () => {
     const newTimeSlots: TimeSlot[] = [
       { id: 'ts1', startTime: '10:00', endTime: '11:00', isBreak: false, isLab: false },
       { id: 'ts2', startTime: '11:00', endTime: '12:00', isBreak: false, isLab: false },
       { id: 'ts3', startTime: '12:00', endTime: '13:00', isBreak: false, isLab: false },
-      { id: 'ts4', startTime: '13:00', endTime: '14:00', isBreak: true, isLab: false },  // Lunch break
+      { id: 'ts4', startTime: '13:00', endTime: '14:00', isBreak: true, isLab: false },
       { id: 'ts5', startTime: '14:00', endTime: '15:00', isBreak: false, isLab: false },
       { id: 'ts6', startTime: '15:00', endTime: '16:00', isBreak: false, isLab: false },
       { id: 'ts7', startTime: '16:00', endTime: '17:00', isBreak: false, isLab: false },
-      // Lab sessions (2 hours)
       { id: 'lab1', startTime: '10:00', endTime: '12:00', isBreak: false, isLab: true },
       { id: 'lab2', startTime: '14:00', endTime: '16:00', isBreak: false, isLab: true },
       { id: 'lab3', startTime: '15:00', endTime: '17:00', isBreak: false, isLab: true },
@@ -439,7 +399,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     toast.success('Reset time slots to college hours (10am to 5pm)');
   },
   
-  // Data persistence methods
   saveTimetableData: () => {
     try {
       const state = get();
@@ -485,19 +444,16 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     }
   },
   
-  // Export methods
   exportToCsv: (type, id) => {
     try {
       const state = get();
       const csv = generateCSV(state, type, id);
       
-      // Create a blob and download link
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
       
-      // Set filename based on type
       let filename = 'acadsync-timetable';
       if (type === 'teacher') {
         const teacher = state.teachers.find(t => t.id === id);
@@ -508,7 +464,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       }
       link.setAttribute('download', `${filename}.csv`);
       
-      // Trigger download and cleanup
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -525,13 +480,11 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       const state = get();
       const json = exportToJSON(state, type, id);
       
-      // Create a blob and download link
       const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
       
-      // Set filename based on type
       let filename = 'acadsync-timetable';
       if (type === 'teacher') {
         const teacher = state.teachers.find(t => t.id === id);
@@ -542,7 +495,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
       }
       link.setAttribute('download', `${filename}.json`);
       
-      // Trigger download and cleanup
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -554,18 +506,14 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     }
   },
   
-  // Sharing methods
   shareTimetableViaEmail: async (email, subject, message, type, id) => {
     try {
-      // In a real application, this would call a backend API
-      // For demo purposes, we'll simulate a successful API call
       console.log(`Sharing timetable via email to ${email}`);
       console.log(`Subject: ${subject}`);
       console.log(`Message: ${message}`);
       console.log(`Type: ${type}`);
       console.log(`ID: ${id || 'N/A'}`);
       
-      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast.success(`Timetable shared via email to ${email}`);
@@ -581,15 +529,12 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     try {
       const state = get();
       
-      // Create a share text
       let shareText = 'Check out this timetable from ACADSYNC: ';
       shareText += get().getTimetableShareLink(type, id);
       
-      // Encode for WhatsApp
       const encodedText = encodeURIComponent(shareText);
       const whatsappUrl = `https://wa.me/?text=${encodedText}`;
       
-      // Open WhatsApp
       window.open(whatsappUrl, '_blank');
       
       toast.success('Opening WhatsApp to share timetable');
@@ -600,7 +545,6 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
   },
   
   getTimetableShareLink: (type, id) => {
-    // Create a link that could be used to view the timetable
     const baseUrl = window.location.origin;
     
     if (type === 'master') {

@@ -4,14 +4,27 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TimetableHeader } from "@/components/timetable/TimetableHeader";
 import { useTimetableStore } from "@/stores/timetableStore";
 import { TimetableType } from "@/types/timetable";
-import { Link } from "react-router-dom";
-import { ExternalLink, GraduationCap } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ExternalLink, GraduationCap } from "lucide-react";
 
 export default function ClassesList() {
   const { classes } = useTimetableStore();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate(-1);
+  };
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center mb-4">
+        <Button variant="outline" size="sm" onClick={handleBack} className="mr-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">Class Timetables</h1>
+      </div>
+      
       <TimetableHeader 
         title="Class Timetables" 
         type={TimetableType.CLASS}
