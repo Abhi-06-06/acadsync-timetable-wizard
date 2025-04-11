@@ -28,6 +28,7 @@ export function TeacherEditDialog({
   const [formData, setFormData] = useState<Omit<Teacher, 'id'>>({
     name: '',
     email: '',
+    department: '',
     subjects: []
   });
 
@@ -36,12 +37,14 @@ export function TeacherEditDialog({
       setFormData({
         name: teacher.name,
         email: teacher.email,
+        department: teacher.department || '',
         subjects: [...teacher.subjects]
       });
     } else {
       setFormData({
         name: '',
         email: '',
+        department: '',
         subjects: []
       });
     }
@@ -105,6 +108,18 @@ export function TeacherEditDialog({
               placeholder="e.g. john.smith@acadsync.edu"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
+              className="col-span-2"
+            />
+          </div>
+          
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label htmlFor="teacher-department" className="text-right">Department</Label>
+            <Input
+              id="teacher-department"
+              type="text"
+              placeholder="e.g. Computer Science"
+              value={formData.department}
+              onChange={(e) => handleChange('department', e.target.value)}
               className="col-span-2"
             />
           </div>

@@ -244,6 +244,16 @@ export const useTimetableStore = create<TimetableStore>((set, get) => ({
     }));
   },
   
+  updateEntry: (id, entry) => set((state) => ({
+    entries: state.entries.map((e) => 
+      e.id === id ? { ...e, ...entry } : e
+    )
+  })),
+  
+  removeEntry: (id) => set((state) => ({
+    entries: state.entries.filter((e) => e.id !== id)
+  })),
+  
   scheduleLabSessions: (subjectId) => {
     const state = get();
     const subject = state.subjects.find(s => s.id === subjectId);

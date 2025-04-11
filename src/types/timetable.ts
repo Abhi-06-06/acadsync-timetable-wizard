@@ -21,6 +21,7 @@ export type Teacher = {
   id: string;
   name: string;
   email: string;
+  department?: string; // Added department as an optional property
   subjects: string[]; // Subject IDs
 };
 
