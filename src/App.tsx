@@ -15,33 +15,36 @@ import ClassTimetable from "./pages/ClassTimetable";
 import GenerateTimetable from "./pages/GenerateTimetable";
 import ShareTimetable from "./pages/ShareTimetable";
 import Settings from "./pages/Settings";
+import React from "react";
 
-// Create a new QueryClient instance
+// Create a new QueryClient instance outside the component
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <React.StrictMode>
     <BrowserRouter>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="timetable/master" element={<MasterTimetable />} />
-            <Route path="timetable/teachers" element={<TeachersList />} />
-            <Route path="timetable/teacher/:teacherId" element={<TeacherTimetable />} />
-            <Route path="timetable/classes" element={<ClassesList />} />
-            <Route path="timetable/class/:classId" element={<ClassTimetable />} />
-            <Route path="generate" element={<GenerateTimetable />} />
-            <Route path="share" element={<ShareTimetable />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="timetable/master" element={<MasterTimetable />} />
+              <Route path="timetable/teachers" element={<TeachersList />} />
+              <Route path="timetable/teacher/:teacherId" element={<TeacherTimetable />} />
+              <Route path="timetable/classes" element={<ClassesList />} />
+              <Route path="timetable/class/:classId" element={<ClassTimetable />} />
+              <Route path="generate" element={<GenerateTimetable />} />
+              <Route path="share" element={<ShareTimetable />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </QueryClientProvider>
     </BrowserRouter>
-  </QueryClientProvider>
+  </React.StrictMode>
 );
 
 export default App;
