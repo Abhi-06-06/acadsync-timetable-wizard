@@ -20,7 +20,7 @@ interface EntryEditDialogProps {
 }
 
 export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day, timeSlotId }: EntryEditDialogProps) {
-  const { subjects, teachers, classes, timeSlots, updateEntry, addEntry, removeEntry } = useTimetableStore();
+  const { subjects, teachers, classes, timeSlots, labRooms, updateEntry, addEntry, removeEntry } = useTimetableStore();
   
   const [formData, setFormData] = React.useState<Omit<TimetableEntry, 'id'>>({
     day: day || (entry?.day || days[0]),
@@ -29,7 +29,8 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
     teacherId: entry?.teacherId || '',
     classId: entry?.classId || '',
     isLab: entry?.isLab || false,
-    batchNumber: entry?.batchNumber || undefined
+    batchNumber: entry?.batchNumber || undefined,
+    labRoomId: entry?.labRoomId || undefined
   });
   
   // Get selected class data for batch info
@@ -44,6 +45,12 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
     return timeSlots.find(ts => ts.id === formData.timeSlotId) || null;
   }, [formData.timeSlotId, timeSlots]);
   
+  // Get selected subject to check if it has a lab
+  const selectedSubject = React.useMemo(() => {
+    if (!formData.subjectId) return null;
+    return subjects.find(s => s.id === formData.subjectId) || null;
+  }, [formData.subjectId, subjects]);
+  
   React.useEffect(() => {
     if (entry) {
       setFormData({
@@ -53,7 +60,8 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
         teacherId: entry.teacherId,
         classId: entry.classId,
         isLab: entry.isLab || false,
-        batchNumber: entry.batchNumber
+        batchNumber: entry.batchNumber,
+        labRoomId: entry.labRoomId
       });
     } else if (createNew) {
       setFormData({
@@ -63,7 +71,8 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
         teacherId: '',
         classId: '',
         isLab: selectedTimeSlot?.isLab || false,
-        batchNumber: undefined
+        batchNumber: undefined,
+        labRoomId: undefined
       });
     }
   }, [entry, createNew, day, timeSlotId, selectedTimeSlot]);
@@ -78,8 +87,40 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
     }
   }, [selectedTimeSlot]);
   
+  // Update isLab based on selected subject
+  React.useEffect(() => {
+    if (selectedSubject && selectedSubject.hasLab) {
+      setFormData(prev => ({
+        ...prev,
+        isLab: true
+      }));
+    }
+  }, [selectedSubject]);
+  
   const handleChange = (field: keyof Omit<TimetableEntry, 'id'>, value: string | boolean | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // If changing to lab session, ensure a lab time slot is selected
+    if (field === 'isLab' && value === true) {
+      const currentTimeSlot = timeSlots.find(ts => ts.id === formData.timeSlotId);
+      if (currentTimeSlot && !currentTimeSlot.isLab) {
+        // Find a suitable lab time slot
+        const labTimeSlots = timeSlots.filter(ts => ts.isLab);
+        if (labTimeSlots.length > 0) {
+          setFormData(prev => ({ ...prev, timeSlotId: labTimeSlots[0].id }));
+        } else {
+          toast.warning('No lab time slots available. Please add lab time slots first.');
+        }
+      }
+    }
+    
+    // If selecting a lab time slot, automatically set isLab to true
+    if (field === 'timeSlotId') {
+      const selectedSlot = timeSlots.find(ts => ts.id === value);
+      if (selectedSlot && selectedSlot.isLab) {
+        setFormData(prev => ({ ...prev, isLab: true }));
+      }
+    }
   };
   
   const handleSave = () => {
@@ -92,6 +133,12 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
     // If it's a lab session with batches, validate batch number
     if (formData.isLab && selectedClass?.batches && selectedClass.batches > 1 && !formData.batchNumber) {
       toast.error("Please select a batch for the lab session");
+      return;
+    }
+    
+    // If it's a lab session, validate lab room
+    if (formData.isLab && !formData.labRoomId) {
+      toast.error("Please select a lab room for the lab session");
       return;
     }
     
@@ -175,7 +222,9 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
               </SelectTrigger>
               <SelectContent>
                 {subjects.map(subject => (
-                  <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                  <SelectItem key={subject.id} value={subject.id}>
+                    {subject.name} {subject.hasLab ? "(with Lab)" : ""}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -223,7 +272,7 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
             <div className="flex items-center space-x-2 col-span-3">
               <Switch
                 id="isLab"
-                checked={formData.isLab || (selectedTimeSlot?.isLab ?? false)}
+                checked={formData.isLab || (selectedTimeSlot?.isLab ?? false) || (selectedSubject?.hasLab ?? false)}
                 onCheckedChange={(checked) => handleChange('isLab', checked)}
                 disabled={selectedTimeSlot?.isLab ?? false}
               />
@@ -246,6 +295,28 @@ export function EntryEditDialog({ entry, isOpen, onClose, createNew = false, day
                   {Array.from({ length: selectedClass.batches }, (_, i) => i + 1).map(batch => (
                     <SelectItem key={batch} value={batch.toString()}>
                       Batch {batch} ({selectedClass.batchCapacity || 15} students)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Show lab room selection only if it's a lab */}
+          {formData.isLab && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="labRoom" className="text-right">Lab Room</Label>
+              <Select 
+                value={formData.labRoomId || ""} 
+                onValueChange={(value) => handleChange('labRoomId', value)}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select lab room" />
+                </SelectTrigger>
+                <SelectContent>
+                  {labRooms.map(room => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name} (Capacity: {room.capacity})
                     </SelectItem>
                   ))}
                 </SelectContent>

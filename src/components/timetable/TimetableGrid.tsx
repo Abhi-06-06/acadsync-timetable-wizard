@@ -6,7 +6,7 @@ import { days } from "@/lib/sample-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { EntryEditDialog } from "./EntryEditDialog";
-import { Pencil, Beaker, Users, UserPlus } from "lucide-react";
+import { Pencil, Beaker, Users, Flask, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ interface TimetableGridProps {
 }
 
 export function TimetableGrid({ type, filterById, editable = true }: TimetableGridProps) {
-  const { timeSlots, entries, subjects, teachers, classes } = useTimetableStore();
+  const { timeSlots, entries, subjects, teachers, classes, labRooms } = useTimetableStore();
   
   // State for edit dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -76,6 +76,13 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
     const classItem = classes.find(c => c.id === classId);
     if (!classItem || !batchNumber) return '';
     return `Batch ${batchNumber} (${classItem.batchCapacity || 15} students)`;
+  };
+  
+  // Get lab room name from ID
+  const getLabRoomName = (labRoomId?: string): string => {
+    if (!labRoomId) return '';
+    const room = labRooms.find(r => r.id === labRoomId);
+    return room ? room.name : 'Unknown Lab';
   };
   
   // Handle click on entry to edit
@@ -136,7 +143,7 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
                   <div className="text-xs text-gray-500">to {timeSlot.endTime}</div>
                   {timeSlot.isLab && (
                     <div className="text-xs text-blue-600 mt-1 flex items-center">
-                      <Beaker className="h-3 w-3 mr-1" />
+                      <Flask className="h-3 w-3 mr-1" />
                       Lab Session
                     </div>
                   )}
@@ -216,6 +223,16 @@ export function TimetableGrid({ type, filterById, editable = true }: TimetableGr
                           >
                             <Users className="h-3 w-3 mr-1" />
                             {getClassBatchInfo(entry.classId, entry.batchNumber)}
+                          </Badge>
+                        )}
+                        
+                        {entry.isLab && entry.labRoomId && (
+                          <Badge 
+                            variant="outline" 
+                            className="mt-1 text-xs py-0 px-1 bg-green-50 text-green-700 border-green-200 flex items-center max-w-fit"
+                          >
+                            <Building className="h-3 w-3 mr-1" />
+                            {getLabRoomName(entry.labRoomId)}
                           </Badge>
                         )}
                         

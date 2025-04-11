@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Subject } from "@/types/timetable";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 
 interface SubjectEditDialogProps {
   subject: Subject | null;
@@ -25,7 +26,8 @@ export function SubjectEditDialog({
   const [formData, setFormData] = useState<Omit<Subject, 'id'>>({
     name: '',
     code: '',
-    color: '#4361EE'
+    color: '#4361EE',
+    hasLab: false
   });
 
   useEffect(() => {
@@ -33,18 +35,20 @@ export function SubjectEditDialog({
       setFormData({
         name: subject.name,
         code: subject.code,
-        color: subject.color || '#4361EE'
+        color: subject.color || '#4361EE',
+        hasLab: subject.hasLab || false
       });
     } else {
       setFormData({
         name: '',
         code: '',
-        color: '#4361EE'
+        color: '#4361EE',
+        hasLab: false
       });
     }
   }, [subject]);
 
-  const handleChange = (field: keyof Omit<Subject, 'id'>, value: string) => {
+  const handleChange = (field: keyof Omit<Subject, 'id'>, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -73,46 +77,52 @@ export function SubjectEditDialog({
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="subject-name" className="text-right">Subject Name</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="subject-name" className="text-right">Name</Label>
             <Input
               id="subject-name"
-              type="text"
-              placeholder="e.g. Mathematics"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              className="col-span-2"
+              className="col-span-3"
             />
           </div>
           
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="subject-code" className="text-right">Subject Code</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="subject-code" className="text-right">Code</Label>
             <Input
               id="subject-code"
-              type="text"
-              placeholder="e.g. MATH101"
               value={formData.code}
               onChange={(e) => handleChange('code', e.target.value)}
-              className="col-span-2"
+              className="col-span-3"
             />
           </div>
           
-          <div className="grid grid-cols-3 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="subject-color" className="text-right">Color</Label>
-            <div className="flex space-x-2 col-span-2">
-              <Input 
-                id="subject-color" 
-                type="color" 
-                className="w-12 h-10 p-1"
+            <div className="flex col-span-3 gap-2">
+              <Input
+                id="subject-color"
+                type="color"
                 value={formData.color}
                 onChange={(e) => handleChange('color', e.target.value)}
+                className="w-20"
               />
-              <Input 
-                type="text" 
-                value={formData.color}
-                onChange={(e) => handleChange('color', e.target.value)}
-                className="flex-1"
+              <div 
+                className="flex-1 rounded-md border"
+                style={{ backgroundColor: formData.color }}
               />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="has-lab" className="text-right">Lab</Label>
+            <div className="flex items-center space-x-2 col-span-3">
+              <Switch
+                id="has-lab"
+                checked={formData.hasLab}
+                onCheckedChange={(checked) => handleChange('hasLab', checked)}
+              />
+              <Label htmlFor="has-lab">Subject has lab sessions (2 hours)</Label>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTimetableStore } from "@/stores/timetableStore";
 import { useState } from "react";
-import { Edit, Plus } from "lucide-react";
+import { Edit, Plus, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { TimeSlotEditDialog } from "@/components/settings/TimeSlotEditDialog";
 import { SubjectEditDialog } from "@/components/settings/SubjectEditDialog";
@@ -17,7 +17,8 @@ export default function Settings() {
     timeSlots, addTimeSlot, updateTimeSlot, removeTimeSlot,
     subjects, addSubject, updateSubject, removeSubject,
     teachers, addTeacher, updateTeacher, removeTeacher,
-    classes, addClass, updateClass, removeClass
+    classes, addClass, updateClass, removeClass,
+    resetToCollegeHours
   } = useTimetableStore();
   
   // Dialog states
@@ -144,13 +145,23 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={openAddTimeSlotDialog} 
-                className="mb-4 bg-acadsync-500 hover:bg-acadsync-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Time Slot
-              </Button>
+              <div className="flex gap-2 mb-4">
+                <Button 
+                  onClick={openAddTimeSlotDialog} 
+                  className="bg-acadsync-500 hover:bg-acadsync-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Time Slot
+                </Button>
+                
+                <Button 
+                  onClick={resetToCollegeHours} 
+                  variant="outline"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Reset to College Hours (10am-5pm)
+                </Button>
+              </div>
               
               <div className="space-y-4">
                 {timeSlots.length === 0 ? (
@@ -227,7 +238,14 @@ export default function Settings() {
                             className="w-4 h-4 rounded-full" 
                             style={{ backgroundColor: subject.color }}
                           />
-                          <span>{subject.name} ({subject.code})</span>
+                          <div>
+                            <span>{subject.name} ({subject.code})</span>
+                            {subject.hasLab && (
+                              <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                With Lab
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <Button 
                           variant="ghost" 
